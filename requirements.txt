@@ -1,0 +1,14 @@
+# Python 3.11.3
+
+# Core Framework
+Django==4.2.3
+
+# API Framework
+djangorestframework==3.16.0
+
+# Testing
+pytest-django==4.11.1
+
+# ASGI Server (for production deployment)
+# uvicorn==0.24.0
+# gunicorn==21.2.0

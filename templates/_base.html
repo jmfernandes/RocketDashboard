@@ -29,13 +29,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <!-- Main Navigation Links -->
-                    {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'circuits:visualizer' %}">
-                                <i class="fas fa-project-diagram me-1"></i>Circuit Visualizer
-                            </a>
-                        </li>
-                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'telemetry:telemetry_list' %}">
+                            <i class="fas fa-project-diagram me-1"></i>Telemetry
+                        </a>
+                    </li>
                     {% block nav_items %}{% endblock %}
                 </ul>
 

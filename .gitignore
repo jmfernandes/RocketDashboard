@@ -46,3 +46,4 @@ coverage.xml
 # Test databases
 test_*.db
 test.db
+test.pdf

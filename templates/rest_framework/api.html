@@ -1,0 +1,12 @@
+{% extends "rest_framework/base.html" %}
+
+{% block branding %}
+    <a class='navbar-brand' rel="nofollow" href="{% url 'telemetry_api:api-root' %}">
+        RocketDashboard API
+    </a>
+{% endblock %}
+
+{% block userlinks %}
+    <li><a href="{% url 'home' %}">Visit Site</a></li>
+    {{ block.super }}
+{% endblock %}

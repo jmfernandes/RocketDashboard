@@ -9,48 +9,94 @@
     <i class="fas fa-satellite text-primary me-2"></i>Satellite Telemetry
 </h1>
 
+<!-- Error Banner -->
+<div id="errorBanner" class="alert alert-danger d-none" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span id="errorMessage"></span>
+</div>
+
+<!-- Success Banner -->
+<div id="successBanner" class="alert alert-success d-none" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    <span id="successMessage"></span>
+</div>
+
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="get" class="row g-3 align-items-end">
+        <div class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label for="satelliteId" class="form-label fw-bold">Satellite ID</label>
-                <select name="satelliteId" id="satelliteId" class="form-select">
+                <label for="filterSatelliteId" class="form-label fw-bold">Satellite ID</label>
+                <select id="filterSatelliteId" class="form-select">
                     <option value="">All Satellites</option>
-                    {% for sid in satellite_ids %}
-                        <option value="{{ sid }}" {% if sid == current_satellite_id %}selected{% endif %}>
-                            {{ sid }}
-                        </option>
-                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-4">
-                <label for="status" class="form-label fw-bold">Health Status</label>
-                <select name="status" id="status" class="form-select">
+                <label for="filterStatus" class="form-label fw-bold">Health Status</label>
+                <select id="filterStatus" class="form-select">
                     <option value="">All Statuses</option>
-                    {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
+                    <option value="healthy">Healthy</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
                 </select>
             </div>
             <div class="col-md-4">
-                <button type="submit" class="btn btn-primary me-2">
+                <button onclick="fetchTelemetry()" class="btn btn-primary me-2">
                     <i class="fas fa-filter me-1"></i>Filter
                 </button>
-                <a href="{% url 'telemetry:telemetry_list' %}" class="btn btn-outline-secondary">
+                <button onclick="clearFilters()" class="btn btn-outline-secondary">
                     Clear
-                </a>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Entry Form -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white fw-bold">
+        <i class="fas fa-plus me-2"></i>Add New Telemetry Entry
+    </div>
+    <div class="card-body">
+        <div id="addError" class="alert alert-danger d-none mb-3">
+            <span id="addErrorMessage"></span>
+        </div>
+        <form id="addForm" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label for="addSatelliteId" class="form-label">Satellite ID</label>
+                <input type="text" class="form-control" id="addSatelliteId" placeholder="SAT-001" required>
+            </div>
+            <div class="col-md-3">
+                <label for="addTimestamp" class="form-label">Timestamp</label>
+                <input type="datetime-local" class="form-control" id="addTimestamp" step="1" required>
+            </div>
+            <div class="col-md-2">
+                <label for="addAltitude" class="form-label">Altitude (km)</label>
+                <input type="number" class="form-control" id="addAltitude" step="0.01" min="0" placeholder="400.00" required>
+            </div>
+            <div class="col-md-2">
+                <label for="addVelocity" class="form-label">Velocity (km/s)</label>
+                <input type="number" class="form-control" id="addVelocity" step="0.01" min="0" placeholder="7.66" required>
+            </div>
+            <div class="col-md-2">
+                <label for="addStatus" class="form-label">Status</label>
+                <select class="form-select" id="addStatus" required>
+                    <option value="healthy">Healthy</option>
+                    <option value="warning">Warning</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Results count -->
-<p class="text-muted mb-3">
-    Showing {{ entries|length }} of {{ page_obj.paginator.count }} entries
-</p>
+<p class="text-muted mb-3" id="resultsCount"></p>
 
 <!-- Telemetry Table -->
 <div class="table-responsive">
@@ -62,80 +108,343 @@
                 <th>Altitude (km)</th>
                 <th>Velocity (km/s)</th>
                 <th>Health Status</th>
+                <th class="text-center" style="width: 140px;">Actions</th>
             </tr>
         </thead>
-        <tbody>
-            {% for entry in entries %}
-                <tr>
-                    <td class="fw-bold">{{ entry.satellite_id }}</td>
-                    <td>{{ entry.timestamp|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ entry.altitude|floatformat:2 }}</td>
-                    <td>{{ entry.velocity|floatformat:2 }}</td>
-                    <td>
-                        {% if entry.status == 'healthy' %}
-                            <span class="badge bg-success">Healthy</span>
-                        {% elif entry.status == 'warning' %}
-                            <span class="badge bg-warning text-dark">Warning</span>
-                        {% elif entry.status == 'critical' %}
-                            <span class="badge bg-danger">Critical</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ entry.status }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
-                        <i class="fas fa-inbox me-2"></i>No telemetry data found.
-                    </td>
-                </tr>
-            {% endfor %}
+        <tbody id="telemetryBody">
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Loading telemetry data...
+                </td>
+            </tr>
         </tbody>
     </table>
 </div>
 
 <!-- Pagination -->
-{% if page_obj.has_other_pages %}
-<nav aria-label="Telemetry pagination">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_satellite_id %}&satelliteId={{ current_satellite_id }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
-                    &laquo; Previous
-                </a>
-            </li>
-        {% else %}
-            <li class="page-item disabled">
-                <span class="page-link">&laquo; Previous</span>
-            </li>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
-                </li>
-            {% else %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}{% if current_satellite_id %}&satelliteId={{ current_satellite_id }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
-                        {{ num }}
-                    </a>
-                </li>
-            {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_satellite_id %}&satelliteId={{ current_satellite_id }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">
-                    Next &raquo;
-                </a>
-            </li>
-        {% else %}
-            <li class="page-item disabled">
-                <span class="page-link">Next &raquo;</span>
-            </li>
-        {% endif %}
-    </ul>
+<nav id="paginationNav" class="d-none" aria-label="Telemetry pagination">
+    <ul id="paginationList" class="pagination justify-content-center"></ul>
 </nav>
-{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API_BASE = '/api/telemetry/';
+let currentPage = 1;
+
+// --- Utility ---
+
+function showError(message) {
+    const banner = document.getElementById('errorBanner');
+    document.getElementById('errorMessage').textContent = message;
+    banner.classList.remove('d-none');
+    setTimeout(() => banner.classList.add('d-none'), 8000);
+}
+
+function showSuccess(message) {
+    const banner = document.getElementById('successBanner');
+    document.getElementById('successMessage').textContent = message;
+    banner.classList.remove('d-none');
+    setTimeout(() => banner.classList.add('d-none'), 4000);
+}
+
+function showAddError(message) {
+    const el = document.getElementById('addError');
+    document.getElementById('addErrorMessage').textContent = message;
+    el.classList.remove('d-none');
+    setTimeout(() => el.classList.add('d-none'), 8000);
+}
+
+function hideAddError() {
+    document.getElementById('addError').classList.add('d-none');
+}
+
+function formatErrors(data) {
+    if (typeof data === 'string') return data;
+    if (data.detail) return data.detail;
+    // Collect field-level errors into a readable string.
+    return Object.entries(data)
+        .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+        .join(' | ');
+}
+
+function statusBadge(status) {
+    const map = {
+        healthy:  '<span class="badge bg-success">Healthy</span>',
+        warning:  '<span class="badge bg-warning text-dark">Warning</span>',
+        critical: '<span class="badge bg-danger">Critical</span>',
+    };
+    return map[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+function statusSelect(currentStatus, id) {
+    const options = ['healthy', 'warning', 'critical'];
+    const labels = { healthy: 'Healthy', warning: 'Warning', critical: 'Critical' };
+    return `<select class="form-select form-select-sm" id="editStatus-${id}">
+        ${options.map(o => `<option value="${o}" ${o === currentStatus ? 'selected' : ''}>${labels[o]}</option>`).join('')}
+    </select>`;
+}
+
+function formatTimestamp(isoString) {
+    const d = new Date(isoString);
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0') + ' ' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0') + ':' +
+        String(d.getSeconds()).padStart(2, '0');
+}
+
+function toDatetimeLocalValue(isoString) {
+    // Convert ISO string to value suitable for datetime-local input.
+    const d = new Date(isoString);
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0') + 'T' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0') + ':' +
+        String(d.getSeconds()).padStart(2, '0');
+}
+
+// --- Fetch & Render ---
+
+function buildUrl(page) {
+    const params = new URLSearchParams();
+    const satId = document.getElementById('filterSatelliteId').value;
+    const status = document.getElementById('filterStatus').value;
+    if (satId) params.set('satellite_id', satId);
+    if (status) params.set('status', status);
+    if (page) params.set('page', page);
+    const qs = params.toString();
+    return API_BASE + (qs ? '?' + qs : '');
+}
+
+async function fetchTelemetry(page) {
+    currentPage = page || 1;
+    try {
+        const resp = await fetch(buildUrl(currentPage));
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => null);
+            throw new Error(data ? formatErrors(data) : `Server error: ${resp.status}`);
+        }
+        const data = await resp.json();
+        renderTable(data.results || data);
+        renderPagination(data);
+        renderCount(data);
+        updateSatelliteFilter(data.results || data);
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+function renderTable(entries) {
+    const tbody = document.getElementById('telemetryBody');
+    if (!entries.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">
+            <i class="fas fa-inbox me-2"></i>No telemetry data found.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = entries.map(e => `
+        <tr id="row-${e.id}">
+            <td class="fw-bold">${e.satellite_id}</td>
+            <td>${formatTimestamp(e.timestamp)}</td>
+            <td>${parseFloat(e.altitude).toFixed(2)}</td>
+            <td>${parseFloat(e.velocity).toFixed(2)}</td>
+            <td>${statusBadge(e.status)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="startEdit(${e.id})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteEntry(${e.id})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderCount(data) {
+    const count = data.count !== undefined ? data.count : (data.results || data).length;
+    const showing = (data.results || data).length;
+    document.getElementById('resultsCount').textContent = `Showing ${showing} of ${count} entries`;
+}
+
+function renderPagination(data) {
+    const nav = document.getElementById('paginationNav');
+    const list = document.getElementById('paginationList');
+
+    if (!data.next && !data.previous) {
+        nav.classList.add('d-none');
+        return;
+    }
+    nav.classList.remove('d-none');
+
+    // Calculate total pages from count and page size.
+    const pageSize = (data.results || []).length || 50;
+    const totalPages = Math.ceil((data.count || 0) / pageSize);
+    let html = '';
+
+    // Previous button.
+    html += `<li class="page-item ${data.previous ? '' : 'disabled'}">
+        <a class="page-link" href="#" onclick="event.preventDefault(); ${data.previous ? `fetchTelemetry(${currentPage - 1})` : ''}">&laquo; Previous</a>
+    </li>`;
+
+    // Page numbers.
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="event.preventDefault(); fetchTelemetry(${i})">${i}</a>
+        </li>`;
+    }
+
+    // Next button.
+    html += `<li class="page-item ${data.next ? '' : 'disabled'}">
+        <a class="page-link" href="#" onclick="event.preventDefault(); ${data.next ? `fetchTelemetry(${currentPage + 1})` : ''}">Next &raquo;</a>
+    </li>`;
+
+    list.innerHTML = html;
+}
+
+function updateSatelliteFilter(entries) {
+    const select = document.getElementById('filterSatelliteId');
+    const current = select.value;
+    const ids = [...new Set(entries.map(e => e.satellite_id))].sort();
+
+    // Merge with existing options to avoid losing IDs not on current page.
+    const existing = new Set();
+    for (const opt of select.options) {
+        if (opt.value) existing.add(opt.value);
+    }
+    ids.forEach(id => existing.add(id));
+
+    const sorted = [...existing].sort();
+    // Rebuild only if new IDs appeared.
+    if (sorted.length !== select.options.length - 1) {
+        const options = '<option value="">All Satellites</option>' +
+            sorted.map(id => `<option value="${id}" ${id === current ? 'selected' : ''}>${id}</option>`).join('');
+        select.innerHTML = options;
+    }
+}
+
+// --- Filters ---
+
+function clearFilters() {
+    document.getElementById('filterSatelliteId').value = '';
+    document.getElementById('filterStatus').value = '';
+    fetchTelemetry();
+}
+
+// --- Add ---
+
+document.getElementById('addForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    hideAddError();
+
+    const tsInput = document.getElementById('addTimestamp').value;
+    // Convert datetime-local value to ISO 8601 with timezone.
+    const timestamp = new Date(tsInput).toISOString();
+
+    const body = {
+        satellite_id: document.getElementById('addSatelliteId').value.trim(),
+        timestamp: timestamp,
+        altitude: parseFloat(document.getElementById('addAltitude').value),
+        velocity: parseFloat(document.getElementById('addVelocity').value),
+        status: document.getElementById('addStatus').value,
+    };
+
+    try {
+        const resp = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => null);
+            throw new Error(data ? formatErrors(data) : `Server error: ${resp.status}`);
+        }
+        showSuccess('Telemetry entry added successfully.');
+        document.getElementById('addForm').reset();
+        fetchTelemetry(currentPage);
+    } catch (err) {
+        showAddError(err.message);
+    }
+});
+
+// --- Inline Edit ---
+
+async function startEdit(id) {
+    try {
+        const resp = await fetch(`${API_BASE}${id}/`);
+        if (!resp.ok) throw new Error(`Failed to fetch entry: ${resp.status}`);
+        const entry = await resp.json();
+
+        const row = document.getElementById(`row-${id}`);
+        row.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm" id="editSatId-${id}" value="${entry.satellite_id}"></td>
+            <td><input type="datetime-local" class="form-control form-control-sm" id="editTimestamp-${id}" step="1" value="${toDatetimeLocalValue(entry.timestamp)}"></td>
+            <td><input type="number" class="form-control form-control-sm" id="editAltitude-${id}" step="0.01" min="0" value="${entry.altitude}"></td>
+            <td><input type="number" class="form-control form-control-sm" id="editVelocity-${id}" step="0.01" min="0" value="${entry.velocity}"></td>
+            <td>${statusSelect(entry.status, id)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-success me-1" onclick="saveEdit(${id})" title="Save">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="fetchTelemetry(${currentPage})" title="Cancel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+async function saveEdit(id) {
+    const tsInput = document.getElementById(`editTimestamp-${id}`).value;
+    const timestamp = new Date(tsInput).toISOString();
+
+    const body = {
+        satellite_id: document.getElementById(`editSatId-${id}`).value.trim(),
+        timestamp: timestamp,
+        altitude: parseFloat(document.getElementById(`editAltitude-${id}`).value),
+        velocity: parseFloat(document.getElementById(`editVelocity-${id}`).value),
+        status: document.getElementById(`editStatus-${id}`).value,
+    };
+
+    try {
+        const resp = await fetch(`${API_BASE}${id}/`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => null);
+            throw new Error(data ? formatErrors(data) : `Server error: ${resp.status}`);
+        }
+        showSuccess('Entry updated successfully.');
+        fetchTelemetry(currentPage);
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+// --- Delete ---
+
+async function deleteEntry(id) {
+    try {
+        const resp = await fetch(`${API_BASE}${id}/`, { method: 'DELETE' });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => null);
+            throw new Error(data ? formatErrors(data) : `Server error: ${resp.status}`);
+        }
+        showSuccess('Entry deleted.');
+        fetchTelemetry(currentPage);
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+// --- Init ---
+
+document.addEventListener('DOMContentLoaded', () => fetchTelemetry());
+</script>
 {% endblock %}

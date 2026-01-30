@@ -1,5 +1,5 @@
 # PHONY targets (not actual files)
-.PHONY: help setup runserver stopserver
+.PHONY: help setup runserver stopserver satellite
 
 # Default target when just running 'make'
 .DEFAULT_GOAL := help
@@ -17,8 +17,12 @@ setup: ## Install dependencies, apply migrations, and seed the database
 	python3 manage.py migrate
 	python3 manage.py setup_db
 
-runserver: ## Start Django development server on default port (8000)
-	python3 manage.py runserver
+runserver: ## Start Django development server in the background on port 8000
+	nohup python3 manage.py runserver --insecure > /dev/null 2>&1 &
+	@echo "Server started at http://localhost:8000"
 
 stopserver: ## Stop all running Django development servers
 	@pkill -f "manage.py runserver" || echo "No Django server running"
+
+satellite: ## Query raw API. Command is `make satellite ID=5`
+	@curl -s "http://localhost:8000/api/telemetry/?satellite_id=SAT-$$(printf '%03d' $(ID))" | python3 -m json.tool

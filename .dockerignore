@@ -1,0 +1,16 @@
+node_modules/
+__pycache__/
+.git/
+dist/
+db.sqlite3
+db.sqlite3-journal
+venv/
+.venv/
+.env
+htmlcov/
+.coverage
+.pytest_cache/
+test-results/
+playwright-report/
+blob-report/
+.DS_Store

@@ -6,7 +6,50 @@ A satellite telemetry dashboard built with Django REST Framework and React 18.
 
 Django was chosen because it provides robust built-in user authentication, security permissions, and role-based access control that can be enabled when needed. The ORM includes model-level type checking and validation out of the box, so data integrity is enforced at both the serializer and database layers without extra libraries. The project does not currently require user login, but Django's auth system can be turned on with minimal changes if needed in the future.
 
-## Requirements
+## Screenshots
+
+### Frontend — Telemetry Dashboard
+![Frontend](pics/frontend.png)
+
+The React SPA at `http://localhost:5173/telemetry/`. Filter by satellite ID or health status, add new entries, and edit or delete existing ones. Pagination is shown at the bottom.
+
+### Django Admin
+![Django Admin](pics/backend.png)
+
+The Django admin panel at `http://localhost:8000/admin/`. Provides a built-in interface for managing telemetry entries with search, filtering by status and satellite ID.
+
+### Browsable REST API
+![Browsable API](pics/api.png)
+
+The Django REST Framework browsable API at `http://localhost:8000/api/telemetry/`. Returns paginated JSON and supports query parameters for filtering.
+
+## Quick Start (Docker)
+
+Run the entire app with no local dependencies — just [Docker](https://www.docker.com/get-started/):
+
+```bash
+make dev-up
+```
+
+Or equivalently:
+
+```bash
+docker-compose up --build
+```
+
+This builds a single container that runs migrations, seeds the database, and starts both servers. Visit `http://localhost:5173` when ready. When you want to bring the contianer down then type:
+
+```bash
+make dev-down
+```
+
+If you need to create a user then ```make superuser``` while a container is running will allow you to specify a username, email, and password in terminal.
+
+```
+NOTE: then using docker, it will delete all entries in the database and repopulate every time you bring it up. Refer to line "python manage.py setup_db" in the docker-entrypoint.sh file.
+```
+
+## Requirements (local development)
 
 - Python 3.11+
 - Node.js 20+
@@ -48,6 +91,9 @@ RocketDashboard/
 ├── vitest.config.js
 ├── playwright.config.js
 ├── index.html
+├── Dockerfile
+├── docker-compose.yml
+├── docker-entrypoint.sh
 │
 ├── RocketDashboard/           # Django project configuration
 │   ├── settings.py

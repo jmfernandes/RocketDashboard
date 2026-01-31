@@ -1,5 +1,5 @@
 # PHONY targets (not actual files)
-.PHONY: help setup runserver stopserver satellite test-pytest test-react test-e2e coverage
+.PHONY: help setup runserver stopserver satellite test-pytest test-react test-e2e coverage dev-up dev-down superuser
 
 # Default target when just running 'make'
 .DEFAULT_GOAL := help
@@ -45,3 +45,12 @@ test-e2e: ## Run Playwright end-to-end tests (starts Django automatically)
 
 coverage: ## Run python tests with coverage report (fails if under 80%)
 	python3 -m pytest --cov --cov-report=term-missing --cov-report=html
+
+dev-up: ## Build and run the app in Docker
+	docker-compose up --build -d
+
+dev-down: ## Bring the container down
+	docker-compose down
+
+superuser: ## Create a Django superuser inside the running Docker container
+	docker-compose exec web python manage.py createsuperuser

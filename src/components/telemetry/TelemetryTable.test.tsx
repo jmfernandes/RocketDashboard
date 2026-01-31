@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { TelemetryEntry } from '../../types'
 import TelemetryTable from './TelemetryTable'
@@ -26,6 +27,8 @@ const defaultProps = {
   entries: mockEntries,
   loading: false,
   editingId: null,
+  sortConfig: { field: 'timestamp', direction: 'desc' as const },
+  onSort: vi.fn(),
   onStartEdit: vi.fn(),
   onSaveEdit: vi.fn(),
   onCancelEdit: vi.fn(),
@@ -35,11 +38,11 @@ const defaultProps = {
 describe('TelemetryTable', () => {
   it('renders table headers', () => {
     render(<TelemetryTable {...defaultProps} />)
-    expect(screen.getByText('Satellite ID')).toBeInTheDocument()
-    expect(screen.getByText('Timestamp')).toBeInTheDocument()
-    expect(screen.getByText('Altitude (km)')).toBeInTheDocument()
-    expect(screen.getByText('Velocity (km/s)')).toBeInTheDocument()
-    expect(screen.getByText('Health Status')).toBeInTheDocument()
+    expect(screen.getByText(/Satellite ID/)).toBeInTheDocument()
+    expect(screen.getByText(/Timestamp/)).toBeInTheDocument()
+    expect(screen.getByText(/Altitude \(km\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Velocity \(km\/s\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Health Status/)).toBeInTheDocument()
     expect(screen.getByText('Actions')).toBeInTheDocument()
   })
 
@@ -65,5 +68,43 @@ describe('TelemetryTable', () => {
     expect(screen.getByDisplayValue('SAT-001')).toBeInTheDocument()
     // Row with id 2 should still be in view mode
     expect(screen.getByText('SAT-002')).toBeInTheDocument()
+  })
+
+  it('shows sort indicator on active column', () => {
+    render(
+      <TelemetryTable
+        {...defaultProps}
+        sortConfig={{ field: 'timestamp', direction: 'desc' }}
+      />
+    )
+    expect(screen.getByText(/Timestamp.*▼/)).toBeInTheDocument()
+  })
+
+  it('shows ascending indicator', () => {
+    render(
+      <TelemetryTable
+        {...defaultProps}
+        sortConfig={{ field: 'altitude', direction: 'asc' }}
+      />
+    )
+    expect(screen.getByText(/Altitude.*▲/)).toBeInTheDocument()
+  })
+
+  it('calls onSort when a column header is clicked', async () => {
+    const onSort = vi.fn()
+    render(<TelemetryTable {...defaultProps} onSort={onSort} />)
+    await userEvent.click(screen.getByText(/Altitude/))
+    expect(onSort).toHaveBeenCalledWith('altitude')
+  })
+
+  it('sets aria-sort on the active column', () => {
+    render(
+      <TelemetryTable
+        {...defaultProps}
+        sortConfig={{ field: 'velocity', direction: 'asc' }}
+      />
+    )
+    const velocityHeader = screen.getByText(/Velocity/)
+    expect(velocityHeader).toHaveAttribute('aria-sort', 'ascending')
   })
 })

@@ -65,12 +65,52 @@ test.describe('Telemetry data display', () => {
 
   test('table has expected column headers', async ({ page }) => {
     const table = page.getByRole('table')
-    await expect(table.getByText('Satellite ID')).toBeVisible()
-    await expect(table.getByText('Timestamp')).toBeVisible()
-    await expect(table.getByText('Altitude (km)')).toBeVisible()
-    await expect(table.getByText('Velocity (km/s)')).toBeVisible()
-    await expect(table.getByText('Health Status')).toBeVisible()
+    await expect(table.getByText(/Satellite ID/)).toBeVisible()
+    await expect(table.getByText(/Timestamp/)).toBeVisible()
+    await expect(table.getByText(/Altitude \(km\)/)).toBeVisible()
+    await expect(table.getByText(/Velocity \(km\/s\)/)).toBeVisible()
+    await expect(table.getByText(/Health Status/)).toBeVisible()
     await expect(table.getByText('Actions')).toBeVisible()
+  })
+
+  test('default sort shows descending indicator on Timestamp', async ({ page }) => {
+    await expect(page.getByRole('table').locator('thead th').getByText(/Timestamp.*▼/)).toBeVisible()
+  })
+})
+
+// ---------- Column Sorting ----------
+
+test.describe('Column sorting', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/telemetry/')
+    await expect(page.getByText(/Showing \d+ of \d+ entries/)).toBeVisible()
+  })
+
+  test('clicking a column header sorts ascending and shows indicator', async ({ page }) => {
+    const altitudeHeader = page.getByRole('table').locator('thead th').getByText(/Altitude/)
+    await altitudeHeader.click()
+
+    // Should show ascending indicator
+    await expect(altitudeHeader).toContainText('▲')
+
+    // Verify the data is sorted ascending by altitude
+    const rows = page.getByRole('table').locator('tbody tr')
+    await expect(rows.first()).toBeVisible()
+    const firstAltitude = parseFloat(await rows.first().locator('td').nth(2).textContent() ?? '0')
+    const secondAltitude = parseFloat(await rows.nth(1).locator('td').nth(2).textContent() ?? '0')
+    expect(firstAltitude).toBeLessThanOrEqual(secondAltitude)
+  })
+
+  test('clicking the same column header twice sorts descending', async ({ page }) => {
+    const altitudeHeader = page.getByRole('table').locator('thead th').getByText(/Altitude/)
+
+    // First click: ascending
+    await altitudeHeader.click()
+    await expect(altitudeHeader).toContainText('▲')
+
+    // Second click: descending
+    await altitudeHeader.click()
+    await expect(altitudeHeader).toContainText('▼')
   })
 })
 
@@ -96,13 +136,11 @@ test.describe('Filtering', () => {
   })
 
   test('filter by health status', async ({ page }) => {
-    // Record initial count before filtering
     const rows = page.getByRole('table').locator('tbody tr')
-    const initialCount = await rows.count()
 
     await page.locator('#filterStatus').selectOption('healthy')
-    // Wait for filtered results to load (count will change since not all entries are healthy)
-    await expect(rows).not.toHaveCount(initialCount)
+    // Wait for the first row's badge to show "Healthy" — proves filtered data has loaded
+    await expect(rows.first().locator('.badge')).toHaveText('Healthy')
 
     const count = await rows.count()
     expect(count).toBeGreaterThan(0)

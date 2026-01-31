@@ -90,6 +90,59 @@ class TestTelemetryList:
 
 
 @pytest.mark.django_db
+class TestTelemetryOrdering:
+
+    def test_default_ordering_is_newest_first(self, api_client, make_entry):
+        make_entry(satellite_id='SAT-001', timestamp='2025-01-01T00:00:00Z')
+        make_entry(satellite_id='SAT-002', timestamp='2025-06-01T00:00:00Z')
+        response = api_client.get(TELEMETRY_LIST_URL)
+        ids = [e['satellite_id'] for e in response.data['results']]
+        assert ids == ['SAT-002', 'SAT-001']
+
+    def test_order_by_altitude_ascending(self, api_client, make_entry):
+        make_entry(altitude=900.0)
+        make_entry(altitude=100.0)
+        make_entry(altitude=500.0)
+        response = api_client.get(TELEMETRY_LIST_URL, {'ordering': 'altitude'})
+        altitudes = [e['altitude'] for e in response.data['results']]
+        assert altitudes == [100.0, 500.0, 900.0]
+
+    def test_order_by_altitude_descending(self, api_client, make_entry):
+        make_entry(altitude=900.0)
+        make_entry(altitude=100.0)
+        make_entry(altitude=500.0)
+        response = api_client.get(TELEMETRY_LIST_URL, {'ordering': '-altitude'})
+        altitudes = [e['altitude'] for e in response.data['results']]
+        assert altitudes == [900.0, 500.0, 100.0]
+
+    def test_order_by_velocity(self, api_client, make_entry):
+        make_entry(velocity=3.0)
+        make_entry(velocity=9.0)
+        make_entry(velocity=1.0)
+        response = api_client.get(TELEMETRY_LIST_URL, {'ordering': 'velocity'})
+        velocities = [e['velocity'] for e in response.data['results']]
+        assert velocities == [1.0, 3.0, 9.0]
+
+    def test_ordering_combined_with_filter(self, api_client, make_entry):
+        make_entry(satellite_id='SAT-001', altitude=800.0)
+        make_entry(satellite_id='SAT-001', altitude=200.0)
+        make_entry(satellite_id='SAT-002', altitude=50.0)
+        response = api_client.get(
+            TELEMETRY_LIST_URL,
+            {'satellite_id': 'SAT-001', 'ordering': 'altitude'},
+        )
+        results = response.data['results']
+        assert len(results) == 2
+        assert results[0]['altitude'] == 200.0
+        assert results[1]['altitude'] == 800.0
+
+    def test_invalid_ordering_field_ignored(self, api_client, make_entry):
+        make_entry()
+        response = api_client.get(TELEMETRY_LIST_URL, {'ordering': 'nonexistent'})
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
 class TestTelemetryCreate:
 
     def test_create_valid_entry(self, api_client):

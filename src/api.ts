@@ -22,12 +22,14 @@ async function handleResponse<T>(resp: Response): Promise<T> {
 
 export async function fetchTelemetry(
   page: number,
-  filters: TelemetryFilters
+  filters: TelemetryFilters,
+  ordering?: string
 ): Promise<PaginatedResponse<TelemetryEntry>> {
   const params = new URLSearchParams()
   if (filters.satellite_id) params.set('satellite_id', filters.satellite_id)
   if (filters.status) params.set('status', filters.status)
   if (page) params.set('page', String(page))
+  if (ordering) params.set('ordering', ordering)
   const qs = params.toString()
   const url = API_BASE + (qs ? '?' + qs : '')
   const resp = await fetch(url)

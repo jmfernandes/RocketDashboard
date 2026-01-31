@@ -1,5 +1,6 @@
 from django.db.models import Q
 from rest_framework import generics, permissions
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
@@ -32,6 +33,9 @@ class TelemetryListCreateView(generics.ListCreateAPIView):
     Uses Q objects to build filters so multiple conditions are AND'd together.
     """
     serializer_class = TelemetryEntrySerializer
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['satellite_id', 'timestamp', 'altitude', 'velocity', 'status']
+    ordering = ['-timestamp']
 
     def get_queryset(self):
         queryset = TelemetryEntry.objects.all()

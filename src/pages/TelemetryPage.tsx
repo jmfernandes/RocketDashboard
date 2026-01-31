@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { TelemetryEntry, TelemetryFilters } from '../types'
+import { TelemetryEntry, TelemetryFilters, SortConfig } from '../types'
 import * as api from '../api'
 import AlertBanner from '../components/telemetry/AlertBanner'
 import FilterBar from '../components/telemetry/FilterBar'
@@ -19,6 +19,10 @@ export default function TelemetryPage() {
     status: '',
   })
   const [satelliteIds, setSatelliteIds] = useState<string[]>([])
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    field: 'timestamp',
+    direction: 'desc',
+  })
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -38,11 +42,16 @@ export default function TelemetryPage() {
     successTimerRef.current = setTimeout(() => setSuccess(null), 4000)
   }
 
+  const ordering =
+    sortConfig.direction === 'desc'
+      ? `-${sortConfig.field}`
+      : sortConfig.field
+
   const loadData = useCallback(
     async (page: number) => {
       setLoading(true)
       try {
-        const data = await api.fetchTelemetry(page, filters)
+        const data = await api.fetchTelemetry(page, filters, ordering)
         setEntries(data.results)
         setCount(data.count)
         setCurrentPage(page)
@@ -61,7 +70,7 @@ export default function TelemetryPage() {
         setLoading(false)
       }
     },
-    [filters]
+    [filters, ordering]
   )
 
   useEffect(() => {
@@ -106,6 +115,14 @@ export default function TelemetryPage() {
     }
   }
 
+  function handleSort(field: string) {
+    setSortConfig((prev) =>
+      prev.field === field
+        ? { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { field, direction: 'asc' }
+    )
+  }
+
   function handleClearFilters() {
     setFilters({ satellite_id: '', status: '' })
   }
@@ -140,6 +157,8 @@ export default function TelemetryPage() {
         entries={entries}
         loading={loading}
         editingId={editingId}
+        sortConfig={sortConfig}
+        onSort={handleSort}
         onStartEdit={setEditingId}
         onSaveEdit={handleSaveEdit}
         onCancelEdit={() => setEditingId(null)}

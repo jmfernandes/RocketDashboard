@@ -1,10 +1,20 @@
-import { TelemetryEntry } from '../../types'
+import { TelemetryEntry, SortConfig } from '../../types'
 import TelemetryRow from './TelemetryRow'
+
+const SORTABLE_COLUMNS: { field: string; label: string }[] = [
+  { field: 'satellite_id', label: 'Satellite ID' },
+  { field: 'timestamp', label: 'Timestamp' },
+  { field: 'altitude', label: 'Altitude (km)' },
+  { field: 'velocity', label: 'Velocity (km/s)' },
+  { field: 'status', label: 'Health Status' },
+]
 
 interface TelemetryTableProps {
   entries: TelemetryEntry[]
   loading: boolean
   editingId: number | null
+  sortConfig: SortConfig
+  onSort: (field: string) => void
   onStartEdit: (id: number) => void
   onSaveEdit: (id: number, data: Omit<TelemetryEntry, 'id'>) => Promise<void>
   onCancelEdit: () => void
@@ -15,6 +25,8 @@ export default function TelemetryTable({
   entries,
   loading,
   editingId,
+  sortConfig,
+  onSort,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
@@ -25,11 +37,27 @@ export default function TelemetryTable({
       <table className="table table-striped table-hover align-middle">
         <thead className="table-dark">
           <tr>
-            <th>Satellite ID</th>
-            <th>Timestamp</th>
-            <th>Altitude (km)</th>
-            <th>Velocity (km/s)</th>
-            <th>Health Status</th>
+            {SORTABLE_COLUMNS.map(({ field, label }) => (
+              <th
+                key={field}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => onSort(field)}
+                aria-sort={
+                  sortConfig.field === field
+                    ? sortConfig.direction === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
+              >
+                {label}{' '}
+                {sortConfig.field === field
+                  ? sortConfig.direction === 'asc'
+                    ? '▲'
+                    : '▼'
+                  : ''}
+              </th>
+            ))}
             <th className="text-center" style={{ width: 140 }}>
               Actions
             </th>

@@ -54,6 +54,8 @@ NOTE: When using docker, it will delete all entries in the database and repopula
 
 ## Installation & Setup
 
+NOTE: These instructions are for running without docker. If you have npm and python on your machine, you can run the servers directly on your machine. Use the following commands.
+
 ```bash
 make setup
 ```
@@ -219,7 +221,13 @@ Starts Django automatically and runs Playwright tests against the full stack in 
 
 - The bootstrap css files are stored locally so that this web app works on an air-gapped intra-net.
 - For production I would use gunicorn and nginx for reverse proxy and serving the app.
+- In a real prod env, I would probably use fastAPI instead of Django since I am not using the front end and leavaging all the tools Django has.
 - I can overwrite the basic Django templates for rest API and 404 errors for unique links and messages.
 - Makefiles allow me to put commands that would normally go in a "scripts" folder into one convenient location.
-- Much like the internal Django HTML templates, I can overwride their internal command system by putting my own code in /management/commands/
+- Much like the internal Django HTML templates, I can overwride their internal command system by putting my own code in /management/commands/. I use this for the `setup_db` command.
 - `make help` lists all available Makefile commands.
+- User can click on any of the headers to sort by ascending or descending.
+
+## TODO
+
+- Remove the Django frontend views.py and the templates folder since they are no longer used. Django will serve only the rest API and the backend database.

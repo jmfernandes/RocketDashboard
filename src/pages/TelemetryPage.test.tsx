@@ -74,10 +74,14 @@ describe('TelemetryPage', () => {
     })
   })
 
-  it('calls fetchTelemetry on mount', async () => {
+  it('calls fetchTelemetry on mount with default sort', async () => {
     renderPage()
     await waitFor(() => {
-      expect(api.fetchTelemetry).toHaveBeenCalledWith(1, { satellite_id: '', status: '' })
+      expect(api.fetchTelemetry).toHaveBeenCalledWith(
+        1,
+        { satellite_id: '', status: '' },
+        '-timestamp'
+      )
     })
   })
 

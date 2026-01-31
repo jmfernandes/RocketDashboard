@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-python:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,3 +29,21 @@ jobs:
 
       - name: Check coverage threshold
         run: python -m coverage report --fail-under=80
+
+  test-react:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run React tests
+        run: npx vitest --run

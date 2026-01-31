@@ -43,6 +43,15 @@ coverage.xml
 .tox/
 .nox/
 
+# Node
+node_modules/
+dist/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # Test databases
 test_*.db
 test.db

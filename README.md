@@ -1,6 +1,6 @@
 # RocketDashboard
 
-A satellite telemetry dashboard built with Django and Django REST Framework.
+A satellite telemetry dashboard built with Django REST Framework and React 18.
 
 ## Why Django
 
@@ -9,6 +9,7 @@ Django was chosen because it provides robust built-in user authentication, secur
 ## Requirements
 
 - Python 3.11+
+- Node.js 20+
 
 ## Installation & Setup
 
@@ -16,15 +17,21 @@ Django was chosen because it provides robust built-in user authentication, secur
 make setup
 ```
 
-This will install dependencies, run migrations, and seed the database with 100 sample telemetry entries.
+This will install Python and Node dependencies, run migrations, and seed the database with sample telemetry entries.
 
-To start the development server:
+To start the development servers:
 
 ```bash
 make runserver
 ```
 
-Then visit `http://localhost:8000`.
+Then visit `http://localhost:5173`.
+
+To stop the servers:
+
+```bash
+make stopserver
+```
 
 Run `make help` to see all available commands.
 
@@ -35,58 +42,85 @@ RocketDashboard/
 ├── manage.py
 ├── Makefile
 ├── requirements.txt
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── vitest.config.js
+├── playwright.config.js
+├── index.html
 │
-├── RocketDashboard/           # Main Django project configuration
+├── RocketDashboard/           # Django project configuration
 │   ├── settings.py
 │   ├── urls.py
 │   ├── wsgi.py
 │   └── asgi.py
 │
-├── apps/                      # All Django apps live here
-│   ├── pages/                 # Home page app
-│   │   ├── views.py
-│   │   └── urls.py
-│   │
-│   └── telemetry/             # Telemetry app
+├── apps/                      # Django apps
+│   └── telemetry/
 │       ├── models.py
-│       ├── views.py
-│       ├── urls.py
 │       ├── admin.py
 │       ├── management/
 │       │   └── commands/
 │       │       └── setup_db.py
-│       └── api/               # REST API for telemetry
-│           ├── views.py
-│           ├── serializers.py
-│           └── urls.py
+│       ├── api/               # REST API
+│       │   ├── views.py
+│       │   ├── serializers.py
+│       │   └── urls.py
+│       └── tests/             # Backend tests
+│           ├── test_models.py
+│           └── test_api.py
 │
-├── templates/                 # HTML templates
-│   ├── _base.html
-│   ├── home.html
-│   └── telemetry/
-│       └── telemetry_list.html
+├── src/                       # React frontend (TypeScript)
+│   ├── main.tsx               # Entry point
+│   ├── App.tsx                # Routes
+│   ├── api.ts                 # Typed fetch wrappers
+│   ├── types.ts               # TypeScript interfaces
+│   ├── components/
+│   │   ├── Navbar.tsx
+│   │   ├── Layout.tsx
+│   │   └── telemetry/
+│   │       ├── FilterBar.tsx
+│   │       ├── AddEntryForm.tsx
+│   │       ├── TelemetryTable.tsx
+│   │       ├── TelemetryRow.tsx
+│   │       ├── Pagination.tsx
+│   │       └── AlertBanner.tsx
+│   └── pages/
+│       ├── HomePage.tsx
+│       ├── TelemetryPage.tsx
+│       └── NotFoundPage.tsx
 │
-└── static/                    # Static assets (CSS, JS, fonts)
+├── e2e/                       # Playwright end-to-end tests
+│   └── telemetry.spec.ts
+│
+└── .github/
+    └── workflows/
+        └── ci.yml             # GitHub Actions CI
 ```
+
+### Architecture
+
+The frontend is a React 18 SPA served by Vite on port 5173. During development, Vite proxies `/api/` requests to the Django backend on port 8000. The Django REST API is unchanged and can also be accessed directly at `http://localhost:8000/api/`.
 
 ### App structure
 
-All Django apps are kept in the `apps/` directory to separate them from the main `RocketDashboard/` project configuration folder. Each app uses the `apps.` prefix in its namespacing (e.g. `apps.telemetry`, `apps.pages`) which is reflected in `AppConfig.name` and `INSTALLED_APPS`. This keeps the project root clean and makes it clear which code is project configuration vs. application logic.
+All Django apps are kept in the `apps/` directory to separate them from the main `RocketDashboard/` project configuration folder. Each app uses the `apps.` prefix in its namespacing (e.g. `apps.telemetry`) which is reflected in `AppConfig.name` and `INSTALLED_APPS`.
 
 ## Navigating the Application
 
-- **Home** (`/`) - Landing page.
-- **Telemetry** (`/telemetry/`) - The main dashboard. Navigate here to view the telemetry data table with filtering by satellite ID and health status.
-- **API** - Click the "API" link in the navbar to go directly to the Django REST Framework browsable API.
+- **Home** (`/`) - Landing page with a link to the telemetry dashboard.
+- **Telemetry** (`/telemetry/`) - The main dashboard. View, filter, add, edit, and delete telemetry entries. Filters apply automatically when changed.
+- **API** - Click the "API" link in the navbar to go directly to the Django REST Framework browsable API at `http://localhost:8000/api/`.
 
 ## REST API
 
-The API is built with [Django REST Framework](https://www.django-rest-framework.org/). Clicking the **API** link in the navigation bar takes you to the browsable API interface. From there you can:
+The API is built with [Django REST Framework](https://www.django-rest-framework.org/). The browsable API interface is available at `http://localhost:8000/api/`.
 
 - Browse to `/api/telemetry/` to see all telemetry entries.
 - Use the built-in HTML form at the bottom of the page to submit new entries directly.
 - Navigate to an individual entry (e.g. `/api/telemetry/1/`) to update or delete it.
 - See validation error messages rendered automatically by the Django backend if you submit invalid data (e.g. negative altitude, invalid timestamp format).
+
 
 ### Endpoints
 
@@ -105,17 +139,43 @@ The API is built with [Django REST Framework](https://www.django-rest-framework.
 - `altitude` and `velocity` must be non-negative numbers.
 - `status` must be one of: `healthy`, `warning`, `critical`.
 
-## Unique Improvements & Notes
+## Testing
+
+### Backend (pytest)
+
+```bash
+make test-pytest
+```
+
+Runs the Django test suite with pytest. Coverage report:
+
+```bash
+make coverage
+```
+
+Fails if coverage drops below 80%.
+
+### Frontend (vitest)
+
+```bash
+make test-react
+```
+
+Runs React component and API unit tests with vitest.
+
+### End-to-end (Playwright)
+
+```bash
+make test-e2e
+```
+
+Starts Django automatically and runs Playwright tests against the full stack in Chromium and Firefox. Covers navigation, CRUD operations, filtering, and pagination.
+
+## Notes
 
 - The bootstrap css files are stored locally so that this web app works on an air-gapped intra-net.
 - For production I would use gunicorn and nginx for reverse proxy and serving the app.
 - I can overwrite the basic Django templates for rest API and 404 errors for unique links and messages.
 - Makefiles allow me to put commands that would normally go in a "scripts" folder into one convenient location.
 - Much like the internal Django HTML templates, I can overwride their internal command system by putting my own code in /management/commands/
-
-
-## Testing
-
-```bash
-pytest
-```
+- `make help` lists all available Makefile commands.

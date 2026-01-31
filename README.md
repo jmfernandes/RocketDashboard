@@ -45,9 +45,7 @@ make dev-down
 
 If you need to create a user then ```make superuser``` while a container is running will allow you to specify a username, email, and password in terminal.
 
-```
-NOTE: then using docker, it will delete all entries in the database and repopulate every time you bring it up. Refer to line "python manage.py setup_db" in the docker-entrypoint.sh file.
-```
+NOTE: When using docker, it will delete all entries in the database and repopulate every time you bring it up. Refer to line "python manage.py setup_db" in the docker-entrypoint.sh file.
 
 ## Requirements (local development)
 

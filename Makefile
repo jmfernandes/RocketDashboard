@@ -1,5 +1,5 @@
 # PHONY targets (not actual files)
-.PHONY: help setup runserver stopserver satellite
+.PHONY: help setup runserver stopserver satellite test coverage
 
 # Default target when just running 'make'
 .DEFAULT_GOAL := help
@@ -26,3 +26,9 @@ stopserver: ## Stop all running Django development servers
 
 satellite: ## Query raw API. Command is `make satellite ID=5`
 	@curl -s "http://localhost:8000/api/telemetry/?satellite_id=SAT-$$(printf '%03d' $(ID))" | python3 -m json.tool
+
+test: ## Run all tests
+	python3 -m pytest -v
+
+coverage: ## Run tests with coverage report (fails if under 80%)
+	python3 -m pytest --cov --cov-report=term-missing --cov-report=html
